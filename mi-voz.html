@@ -1,0 +1,479 @@
+<title>Mi voz en 45 segundos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a single reading column; two upload "takes" side by side, then the report as a mixing-desk strip of seven criteria. */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --ink:#13213B; --muted:#5A6781; --line:#DADFEA;
+  --accent:#1F5FD1; --accent-soft:#E3ECFB; --signal:#E3AC12; --signal-soft:#FBF1D2;
+  --ok:#2C7D52; --ok-soft:#E1F1E8; --warn:#A86F00; --warn-soft:#FAEFD6; --alert:#B83A27; --alert-soft:#F8E3DF;
+  --f-display:"Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --f-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1525; --surface:#162038; --ink:#E7ECF5; --muted:#9BA8BF; --line:#28334E;
+  --accent:#7AA6FF; --accent-soft:#1C2C52; --signal:#F2C443; --signal-soft:#3A3115;
+  --ok:#6CC795; --ok-soft:#173326; --warn:#E9B84E; --warn-soft:#3A2E12; --alert:#F08A78; --alert-soft:#3E1F1A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1525; --surface:#162038; --ink:#E7ECF5; --muted:#9BA8BF; --line:#28334E;
+  --accent:#7AA6FF; --accent-soft:#1C2C52; --signal:#F2C443; --signal-soft:#3A3115;
+  --ok:#6CC795; --ok-soft:#173326; --warn:#E9B84E; --warn-soft:#3A2E12; --alert:#F08A78; --alert-soft:#3E1F1A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(32px,6vw,52px);line-height:1.02;margin:6px 0 10px;text-wrap:balance;letter-spacing:-.01em}
+h1 .num{color:var(--signal)}
+h2{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0;text-wrap:balance}
+h3{font-family:var(--f-display);font-weight:500;font-size:17px;margin:0}
+.lead{max-width:62ch;color:var(--muted);margin:0}
+.lead strong{color:var(--ink)}
+.takes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.take{background:var(--surface);border:1.5px dashed var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0;transition:border-color .15s}
+.take.drag{border-color:var(--accent);background:var(--accent-soft)}
+.take.loaded{border-style:solid}
+.take-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tag{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.take p{margin:0;color:var(--muted);font-size:14px}
+.btn{font:600 14px var(--f-body);border-radius:999px;padding:9px 16px;border:1.5px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer;display:inline-flex;align-items:center;gap:8px;align-self:flex-start}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:focus-visible,.seg button:focus-visible,.tap:focus-visible,.rate button:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.status{font-size:13px;color:var(--muted);min-height:1.2em;overflow-wrap:anywhere}
+.status.err{color:var(--alert)}
+audio{width:100%;height:36px}
+.report{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:22px}
+.report-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{font:600 13px var(--f-body);border:0;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.sample-flag{font-size:12px;font-weight:600;background:var(--signal-soft);color:var(--warn);padding:4px 10px;border-radius:999px}
+.focus{background:var(--accent-soft);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.focus b{font-family:var(--f-display);font-size:17px}
+.stats{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:13px;color:var(--muted)}
+.stats span b{font-family:var(--f-mono);color:var(--ink);font-weight:500}
+.wave-box{display:flex;flex-direction:column;gap:8px}
+.canvas-scroll{overflow-x:auto}
+canvas{display:block;width:100%;height:170px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.crit{border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0;position:relative;overflow:hidden}
+.crit::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--line)}
+.crit[data-s="ok"]::before{background:var(--ok)} .crit[data-s="warn"]::before{background:var(--warn)} .crit[data-s="alert"]::before{background:var(--alert)} .crit[data-s="peer"]::before{background:var(--accent)}
+.crit-top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.alert{background:var(--alert-soft);color:var(--alert)} .pill.peer{background:var(--accent-soft);color:var(--accent)}
+.big{font-family:var(--f-mono);font-size:22px;font-weight:500;letter-spacing:-.01em}
+.big small{font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:400;margin-left:4px}
+.meter{position:relative;height:8px;border-radius:99px;background:var(--line)}
+.meter .band{position:absolute;top:0;bottom:0;background:var(--ok-soft);border-left:2px solid var(--ok);border-right:2px solid var(--ok)}
+.meter .dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--ink);border:2px solid var(--surface);transform:translate(-50%,-50%)}
+.scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.crit p{margin:0;font-size:14px}
+.tip{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+.tip b{color:var(--ink);font-weight:600}
+.taps{display:flex;flex-wrap:wrap;gap:6px}
+.tap{font:500 13px var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.tap b{font-family:var(--f-mono);font-weight:500;color:var(--accent)}
+.rate{display:flex;gap:6px}
+.rate button{font:600 14px var(--f-mono);width:40px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.rate button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.cmp-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:460px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.up{color:var(--ok)} .down{color:var(--alert)} .flat{color:var(--muted)}
+.foot{font-size:13px;color:var(--muted);max-width:70ch}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.copied{font-size:13px;color:var(--ok)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+<main class="wrap">
+  <header>
+    <div class="eyebrow">Taller · Técnicas de voz y dicción para directivos persuasivos</div>
+    <h1>Mi voz en <span class="num">45</span> segundos</h1>
+    <p class="lead">Graba tu respuesta a <strong>«¿Qué me llevo de la Escuela de Liderazgo para mi equipo?»</strong>, súbela y recibe un espejo de tu voz con los siete criterios de la ficha. Al final del taller sube la segunda grabación y compara. <strong>El audio se analiza en tu navegador y no sale de tu dispositivo.</strong></p>
+  </header>
+
+  <section class="takes" aria-label="Grabaciones">
+    <div class="take" id="take-0">
+      <div class="take-head"><h3>Grabación 1 · Antes</h3><span class="tag">8:40 a. m.</span></div>
+      <p>Arrastra aquí el audio o elígelo de tu celular. Sirven notas de voz de WhatsApp (.opus), .m4a, .mp3 o .wav.</p>
+      <label class="btn" for="file-0">Subir audio</label>
+      <input type="file" id="file-0" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac">
+      <div class="status" id="status-0" aria-live="polite"></div>
+      <audio id="player-0" controls hidden></audio>
+    </div>
+    <div class="take" id="take-1">
+      <div class="take-head"><h3>Grabación 2 · Después</h3><span class="tag">10:15 a. m.</span></div>
+      <p>Misma pregunta, al cierre del taller, aplicando lo practicado.</p>
+      <label class="btn ghost" for="file-1">Subir audio</label>
+      <input type="file" id="file-1" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac">
+      <div class="status" id="status-1" aria-live="polite"></div>
+      <audio id="player-1" controls hidden></audio>
+    </div>
+  </section>
+
+  <section class="report" aria-label="Reporte">
+    <div class="report-head">
+      <div class="row"><h2 id="rep-title">Tu reporte</h2><span class="sample-flag" id="sample-flag">Ejemplo: sube tu audio para ver el tuyo</span></div>
+      <div class="seg" role="group" aria-label="Ver grabación">
+        <button type="button" id="seg-0" aria-pressed="true">Antes</button>
+        <button type="button" id="seg-1" aria-pressed="false" disabled>Después</button>
+      </div>
+    </div>
+    <div class="focus" id="focus"></div>
+    <div class="stats" id="stats"></div>
+    <div class="wave-box">
+      <div class="canvas-scroll"><canvas id="wave" aria-label="Línea de tiempo de la voz: volumen, entonación y pausas"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>Volumen</span>
+        <span><i style="background:var(--ink);height:3px;vertical-align:3px"></i>Entonación (tono)</span>
+        <span><i style="background:var(--signal-soft);border:1px solid var(--signal)"></i>Pausa</span>
+        <span><i style="background:var(--alert)"></i>Posible «eeeh» o «mmm»</span>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div id="cmp-wrap" hidden>
+      <h2 style="margin-bottom:10px">Antes y después</h2>
+      <div class="cmp-scroll"><table id="cmp"></table></div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn ghost" id="copy">Copiar resumen</button>
+      <span class="copied" id="copied" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <p class="foot">Las mediciones son aproximadas: cambian con el celular, la distancia al micrófono y el ruido de la sala. El ritmo se estima contando sílabas y los «eeeh» por sonidos sostenidos de tono plano; las muletillas con palabras («o sea», «¿sí?») y la claridad las evalúas tú o tu pareja. Úsalo como espejo, no como calificación.</p>
+</main>
+<script>
+// Voice analysis for "Mi voz en 45 segundos". Pure function: analyze(Float32Array mono @16k, sr) -> metrics
+function analyzeVoice(x, sr, P) {
+  P = Object.assign({sm:1, dip:0.5, md:5, vox:3, above:2}, P||{});
+  const hop = Math.round(sr * 0.01), win = Math.round(sr * 0.025);
+  const nF = Math.max(0, Math.floor((x.length - win) / hop));
+  const db = new Float32Array(nF);
+  for (let f = 0; f < nF; f++) {
+    let s = 0; const o = f * hop;
+    for (let i = 0; i < win; i++) { const v = x[o + i]; s += v * v; }
+    db[f] = 10 * Math.log10(s / win + 1e-10);
+  }
+  const sorted = Array.from(db).sort((a, b) => a - b);
+  const pct = (arr, p) => arr.length ? arr[Math.min(arr.length - 1, Math.max(0, Math.floor(p * (arr.length - 1))))] : NaN;
+  const floor = pct(sorted, 0.10), p95 = pct(sorted, 0.95);
+  const thr = floor + Math.max(8, 0.3 * (p95 - floor));
+  // raw mask, then close gaps < 200ms and drop blips < 80ms
+  const mask = new Uint8Array(nF);
+  for (let f = 0; f < nF; f++) mask[f] = db[f] > thr ? 1 : 0;
+  const runs = (m) => { const r = []; let s = 0; for (let f = 1; f <= m.length; f++) if (f === m.length || m[f] !== m[s]) { r.push([m[s], s, f]); s = f; } return r; };
+  for (const [v, a, b] of runs(mask)) if (v === 0 && a > 0 && b < nF && b - a < 20) mask.fill(1, a, b);
+  for (const [v, a, b] of runs(mask)) if (v === 1 && b - a < 8) mask.fill(0, a, b);
+  let first = mask.indexOf(1), last = mask.lastIndexOf(1);
+  if (first < 0) return { error: "No se detectó voz en el audio. Revisa que la grabación tenga sonido." };
+  const pauses = [];
+  for (const [v, a, b] of runs(mask)) if (v === 0 && a > first && b <= last && b - a >= 25) pauses.push([a / 100, b / 100]);
+  let speechF = 0; for (let f = first; f <= last; f++) speechF += mask[f];
+  const speechT = speechF / 100, totalT = (last - first + 1) / 100;
+
+  // pitch (YIN) every 2 frames on speech frames
+  const pw = 512, minLag = Math.floor(sr / 400), maxLag = Math.floor(sr / 70);
+  const pitch = new Float32Array(nF); const d = new Float32Array(maxLag + 1);
+  for (let f = first; f <= last; f += 2) {
+    if (!mask[f] || db[f] < thr + 3) continue;
+    const o = f * hop; if (o + pw + maxLag >= x.length) break;
+    d[0] = 1; let run = 0, found = 0;
+    for (let t = 1; t <= maxLag; t++) {
+      let s = 0; for (let i = 0; i < pw; i++) { const dd = x[o + i] - x[o + i + t]; s += dd * dd; }
+      run += s; d[t] = run > 0 ? s * t / run : 1;
+    }
+    for (let t = minLag; t <= maxLag; t++) if (d[t] < 0.15) { while (t + 1 <= maxLag && d[t + 1] < d[t]) t++; found = t; break; }
+    if (found) { pitch[f] = sr / found; if (f + 1 < nF) pitch[f + 1] = pitch[f]; }
+  }
+  const pv = []; for (let f = 0; f < nF; f++) if (pitch[f] > 0) pv.push(pitch[f]);
+  pv.sort((a, b) => a - b);
+  const medF0 = pct(pv, 0.5);
+  const st = new Float32Array(nF).fill(NaN); const stv = [];
+  for (let f = 0; f < nF; f++) if (pitch[f] > 0) { const s = 12 * Math.log2(pitch[f] / medF0); if (Math.abs(s) < 10) { st[f] = s; stv.push(s); } }
+  const mean = a => a.reduce((p, c) => p + c, 0) / (a.length || 1);
+  const sd = a => { const m = mean(a); return Math.sqrt(mean(a.map(v => (v - m) ** 2))); };
+  const stSorted = stv.slice().sort((a, b) => a - b);
+  const pitchSD = sd(stv), pitchRange = pct(stSorted, 0.9) - pct(stSorted, 0.1);
+
+  // syllable nuclei: smoothed intensity peaks, voiced, dip >= 2 dB, >= 90 ms apart
+  const sm = new Float32Array(nF);
+  for (let f = 0; f < nF; f++) { let s = 0, c = 0; for (let k = -P.sm; k <= P.sm; k++) if (f + k >= 0 && f + k < nF) { s += db[f + k]; c++; } sm[f] = s / c; }
+  const peaks = []; let lastPeak = -100, minSince = Infinity;
+  for (let f = first + 1; f < last; f++) {
+    minSince = Math.min(minSince, sm[f]);
+    if (sm[f] >= sm[f - 1] && sm[f] > sm[f + 1] && mask[f] && sm[f] > thr + P.above) {
+      let voiced = false; for (let k = -P.vox; k <= P.vox; k++) if (pitch[f + k] > 0) voiced = true;
+      if (!voiced) continue;
+      if (sm[f] - minSince >= P.dip && f - lastPeak >= P.md) { peaks.push(f); lastPeak = f; minSince = Infinity; }
+      else if (peaks.length && f - lastPeak < P.md && sm[f] > sm[peaks[peaks.length - 1]]) { peaks[peaks.length - 1] = f; lastPeak = f; }
+    }
+  }
+  const syl = peaks.length;
+  const artRate = syl / speechT, spkRate = syl / totalT;
+  const wpm = spkRate * 60 / 1.9;
+
+  // filled pauses ("eeeh", "mmm"): voiced stretch >= 400 ms, flat pitch, flat energy, at most one nucleus
+  const fillers = [];
+  let a = -1;
+  for (let f = first; f <= last + 1; f++) {
+    const v = f <= last && !isNaN(st[f]);
+    if (v && a < 0) a = f;
+    if (!v && a >= 0) {
+      // allow 1-frame gaps from 2-step pitch
+      if (f <= last && !isNaN(st[f + 1])) continue;
+      const b = f;
+      if (b - a >= 40) {
+        const seg = [], eg = []; for (let k = a; k < b; k++) { if (!isNaN(st[k])) seg.push(st[k]); eg.push(db[k]); }
+        const nuc = peaks.filter(p => p >= a && p < b).length;
+        if (sd(seg) < 0.7 && sd(eg) < 3 && nuc <= 2) fillers.push([a / 100, b / 100]);
+      }
+      a = -1;
+    }
+  }
+
+  // loudness
+  const sp = []; for (let f = first; f <= last; f++) if (mask[f]) sp.push(db[f]);
+  sp.sort((a, b) => a - b);
+  const level = pct(sp, 0.5), dyn = pct(sp, 0.9) - pct(sp, 0.1);
+  // ending: last 3 s of speech vs median
+  const endSp = []; let cnt = 0;
+  for (let f = last; f >= first && cnt < 300; f--) if (mask[f]) { endSp.push(db[f]); cnt++; }
+  endSp.sort((a, b) => a - b);
+  const endDrop = level - pct(endSp, 0.5);
+
+  // envelope for drawing: 100 ms buckets
+  const env = [], pc = [];
+  for (let f = 0; f < nF; f += 10) {
+    let m = -100, ps = [], c = 0; for (let k = f; k < Math.min(nF, f + 10); k++) { m = Math.max(m, db[k]); if (!isNaN(st[k])) ps.push(st[k]); }
+    env.push(Math.max(0, Math.min(1, (m - floor) / (p95 - floor + 6))));
+    pc.push(ps.length ? mean(ps) : null);
+  }
+  const pausesPerMin = pauses.length / (totalT / 60);
+  return {
+    duration: x.length / sr, totalT, speechT, start: first / 100, end: (last + 1) / 100,
+    phonation: speechT / totalT, pauses, pausesPerMin,
+    longestPause: pauses.reduce((m, p) => Math.max(m, p[1] - p[0]), 0),
+    meanPause: pauses.length ? mean(pauses.map(p => p[1] - p[0])) : 0,
+    syl, artRate, spkRate, wpm, medF0, pitchSD, pitchRange, fillers,
+    level, dyn, endDrop, env, pc
+  };
+}
+(function(){
+const $ = id => document.getElementById(id);
+const fmt = (v, d=0) => (Math.round(v * 10**d) / 10**d).toLocaleString("es-CO", {minimumFractionDigits:d, maximumFractionDigits:d});
+const takes = [null, null];      // analysis results
+const manual = [newManual(), newManual()];
+let view = 0, isSample = true;
+function newManual(){ return {taps:{"eh":0,"o sea":0,"¿sí?":0,"digamos":0,"bueno":0,"este":0}, clarity:0}; }
+
+// ---------- example data (clearly labelled) ----------
+function makeSample(){
+  const T = 44.6, n = Math.round(T*10), env = [], pc = [];
+  const pauses = [[6.1,6.7],[12.4,13.5],[19.0,19.5],[25.2,26.0],[31.7,32.2],[38.3,38.9]];
+  const fillers = [[13.6,14.1],[26.1,26.6]];
+  let seed = 7; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  for (let i=0;i<n;i++){
+    const t = i/10, inP = pauses.some(p => t>=p[0] && t<p[1]);
+    const fade = t > T-4 ? 1-(t-(T-4))/6 : 1;
+    env.push(inP ? 0.03 : Math.max(0.05,(0.55+0.3*Math.sin(t*9.3)*Math.sin(t*2.1)+0.15*rnd())*fade));
+    pc.push(inP ? null : 1.8*Math.sin(t*0.9) + 1.2*Math.sin(t*3.7) - t*0.03 + (rnd()-.5));
+  }
+  return {sample:true, duration:45.3, totalT:T, speechT:40.6, start:0.4, end:45.0, phonation:0.91, pauses, pausesPerMin:8.1,
+    longestPause:1.1, meanPause:0.62, syl:242, artRate:5.96, spkRate:5.43, wpm:172, medF0:186, pitchSD:2.3, pitchRange:5.6,
+    fillers, level:-21, dyn:15.2, endDrop:6.8, env, pc};
+}
+
+// ---------- scoring ----------
+const ST = {ok:"En rango", warn:"Para ajustar", alert:"Atención", peer:"Lo evalúa tu pareja"};
+function evaluate(m, man){
+  const out = [];
+  const perMin = v => v / (m.totalT/60);
+  // Volumen
+  let s="ok", t="Tu voz tiene un nivel y una variación de volumen adecuados.";
+  if (m.level < -35){ s="alert"; t="Se oye muy bajo. Puede ser distancia al micrófono o falta de proyección."; }
+  else if (m.level < -30){ s="warn"; t="El nivel es bajo. Proyecta como si hablaras al fondo de la sala."; }
+  else if (m.level > -8){ s="warn"; t="El audio llega saturado. Aleja un poco el celular."; }
+  else if (m.dyn < 8){ s="warn"; t="El volumen casi no cambia. Sube la energía en las ideas clave."; }
+  else if (m.dyn > 26){ s="warn"; t="El volumen sube y baja mucho. Mantén la proyección estable."; }
+  out.push({k:"vol", name:"Volumen", s, big:fmt(m.dyn,0), unit:"dB de variación", text:t,
+    meter:{min:0,max:32,lo:8,hi:26,v:m.dyn,l:"plano",r:"irregular"},
+    tip:"<b>Ejercicio:</b> escalera de volumen, del 1 al 5 sin gritar."});
+  // Ritmo
+  const w = m.wpm; s = w<100 ? "warn" : w<=165 ? "ok" : w<=185 ? "warn" : "alert";
+  t = w<100 ? "Vas lento: cuida que la energía no se caiga." : w<=165 ? "Un ritmo cómodo para que tu equipo te siga." : w<=185 ? "Vas rápido: las ideas se atropellan un poco." : "Vas muy rápido: el público pierde las ideas clave.";
+  out.push({k:"rit", name:"Ritmo", s, big:"≈ "+fmt(w,0), unit:"palabras por minuto", text:t,
+    meter:{min:70,max:220,lo:110,hi:165,v:w,l:"lento",r:"rápido"},
+    tip:"<b>Ejercicio:</b> la partitura; marca / y // y respeta cada pausa."});
+  // Pausas
+  const ph = m.phonation*100;
+  s = (ph>90 || m.pausesPerMin<5) ? "warn" : ph<60 ? "warn" : "ok";
+  t = (ph>90 || m.pausesPerMin<5) ? "Hablas casi sin respirar. Deja silencios antes de las ideas clave." : ph<60 ? "Hay muchos silencios; pueden sonar a duda. Prepara la idea antes de hablar." : "Usas pausas para respirar y dar tiempo a tu público.";
+  if (m.longestPause > 3) { s="warn"; t += " Tu pausa más larga dura "+fmt(m.longestPause,1)+" s: puede sonar a que perdiste el hilo."; }
+  out.push({k:"pau", name:"Pausas", s, big:m.pauses.length, unit:"pausas · "+fmt(m.pausesPerMin,1)+" por minuto", text:t,
+    meter:{min:50,max:100,lo:65,hi:90,v:Math.max(50,Math.min(100,ph)),l:"muchas",r:"sin pausas",cap:"% del tiempo hablando: "+fmt(ph,0)+"%"},
+    tip:"<b>Tip:</b> una pausa de 2 s antes de la idea clave vale más que subir la voz."});
+  // Muletillas
+  const fpm = perMin(m.fillers.length), manTotal = Object.values(man.taps).reduce((a,b)=>a+b,0), all = perMin(m.fillers.length+manTotal);
+  s = all<=1.5 ? "ok" : all<=4 ? "warn" : "alert";
+  t = (m.fillers.length ? "Detectamos "+m.fillers.length+" posibles «eeeh» o «mmm». " : "No detectamos «eeeh» sostenidos. ") +
+      "Escucha tu audio y toca cada muletilla con palabras que oigas:";
+  out.push({k:"mul", name:"Muletillas", s, big:fmt(all,1), unit:"por minuto", text:t, taps:true,
+    tip:"<b>Ejercicio:</b> cazamuletillas; cambia la muletilla por silencio."});
+  // Claridad (pareja)
+  const c = man.clarity;
+  s = !c ? "peer" : c>=3 ? "ok" : c==2 ? "warn" : "alert";
+  out.push({k:"cla", name:"Claridad", s, big:c?c+" / 4":"—", unit:c?"según tu pareja":"", text:"¿Se entiende cada palabra, sobre todo los finales? Pídele a tu pareja que califique de 1 a 4.", rate:true,
+    tip:"<b>Ejercicio:</b> trabalenguas con lápiz entre los dientes."});
+  // Energía / entonación
+  const p = m.pitchSD; s = p<2 ? "alert" : p<2.5 ? "warn" : p<=5.5 ? "ok" : "warn";
+  t = p<2 ? "Tu tono casi no cambia: suena plano y cuesta seguirte." : p<2.5 ? "Hay poca variación de tono. Juega con el énfasis en las palabras clave." : p<=5.5 ? "Tu entonación varía y transmite convicción." : "Tu tono cambia mucho; puede sonar exagerado o nervioso.";
+  out.push({k:"ene", name:"Energía y entonación", s, big:fmt(p,1), unit:"semitonos de variación", text:t,
+    meter:{min:0,max:7,lo:2.5,hi:5.5,v:Math.min(7,p),l:"plana",r:"exagerada"},
+    tip:"<b>Ejercicio:</b> «Una frase, cinco intenciones»."});
+  // Cierre
+  const e = m.endDrop; s = e>6 ? "alert" : e>3.5 ? "warn" : "ok";
+  t = e>6 ? "Tu voz se apaga al final: el cierre pierde fuerza y suena a duda." : e>3.5 ? "Baja un poco la energía al final. Sostén la voz hasta la última palabra." : "Mantienes la energía hasta el final.";
+  out.push({k:"cie", name:"Cierre", s, big:(e>0?"−":"+")+fmt(Math.abs(e),1), unit:"dB en los últimos 3 s", text:t,
+    meter:{min:-2,max:10,lo:-2,hi:3.5,v:Math.max(-2,Math.min(10,e)),l:"se sostiene",r:"se apaga"},
+    tip:"<b>Tip:</b> termina con un llamado claro y una pausa, no con «y bueno, eso»."});
+  return out;
+}
+
+// ---------- rendering ----------
+function meterHTML(mt){
+  const pos = v => ((v-mt.min)/(mt.max-mt.min)*100).toFixed(1)+"%";
+  return `<div class="meter"><div class="band" style="left:${pos(mt.lo)};width:calc(${pos(mt.hi)} - ${pos(mt.lo)})"></div><div class="dot" style="left:${pos(mt.v)}"></div></div>
+  <div class="scale"><span>${mt.l}</span><span>${mt.r}</span></div>${mt.cap?`<div class="scale" style="justify-content:center">${mt.cap}</div>`:""}`;
+}
+function render(){
+  const m = isSample ? SAMPLE : takes[view];
+  const man = manual[isSample ? 0 : view];
+  $("sample-flag").hidden = !isSample;
+  $("rep-title").textContent = isSample ? "Así se verá tu reporte" : (view===0 ? "Tu reporte · Antes" : "Tu reporte · Después");
+  $("seg-0").setAttribute("aria-pressed", String(view===0)); $("seg-1").setAttribute("aria-pressed", String(view===1));
+  $("seg-1").disabled = !takes[1]; $("seg-0").disabled = !takes[0] && !isSample;
+  const crit = evaluate(m, man);
+  const flagged = crit.filter(c => c.s==="alert").concat(crit.filter(c => c.s==="warn")).slice(0,2);
+  $("focus").innerHTML = flagged.length
+    ? `<span class="eyebrow">Tu foco para practicar</span><b>${flagged.map(c=>c.name).join(" y ")}</b><span>${flagged[0].text}</span>`
+    : `<span class="eyebrow">Tu foco para practicar</span><b>Sostén lo que ya haces bien</b><span>Todos los criterios medidos están en rango. Pide a tu pareja la calificación de claridad.</span>`;
+  $("stats").innerHTML = `<span>Duración <b>${fmt(m.duration,0)} s</b></span><span>Hablando <b>${fmt(m.speechT,0)} s</b></span><span>Pausa más larga <b>${fmt(m.longestPause,1)} s</b></span><span>Tono medio <b>${fmt(m.medF0,0)} Hz</b></span>` +
+    (m.duration < 20 ? `<span style="color:var(--warn)">Graba entre 30 y 60 s para un análisis más fiable.</span>` : "") + (m.cut ? `<span style="color:var(--warn)">Se analizaron los primeros 3 minutos.</span>` : "");
+  $("grid").innerHTML = crit.map(c => `
+    <article class="crit" data-s="${c.s}">
+      <div class="crit-top"><h3>${c.name}</h3><span class="pill ${c.s}">${ST[c.s]}</span></div>
+      <div class="big">${c.big}<small>${c.unit}</small></div>
+      ${c.meter ? meterHTML(c.meter) : ""}
+      <p>${c.text}</p>
+      ${c.taps ? `<div class="taps">${Object.entries(man.taps).map(([w,n])=>`<button type="button" class="tap" data-w="${w}">${w} <b>${n}</b></button>`).join("")}<button type="button" class="tap" data-w="__reset" aria-label="Reiniciar conteo">↺</button></div>` : ""}
+      ${c.rate ? `<div class="rate" role="group" aria-label="Claridad de 1 a 4">${[1,2,3,4].map(n=>`<button type="button" data-r="${n}" aria-pressed="${man.clarity===n}">${n}</button>`).join("")}</div>` : ""}
+      <div class="tip">${c.tip}</div>
+    </article>`).join("");
+  drawWave(m);
+  renderCompare();
+}
+function renderCompare(){
+  const ok = takes[0] && takes[1]; $("cmp-wrap").hidden = !ok; if (!ok) return;
+  const a = evaluate(takes[0], manual[0]), b = evaluate(takes[1], manual[1]);
+  const rank = {alert:0, warn:1, peer:1, ok:2};
+  $("cmp").innerHTML = `<thead><tr><th>Criterio</th><th>Antes</th><th>Después</th><th>Cambio</th></tr></thead><tbody>` +
+    a.map((c,i) => { const d = rank[b[i].s]-rank[c.s]; const cls = d>0?"up":d<0?"down":"flat"; const lab = d>0?"Mejoró":d<0?"Bajó":"Igual";
+      return `<tr><td>${c.name}</td><td class="n">${c.big} <span class="pill ${c.s}">${ST[c.s]}</span></td><td class="n">${b[i].big} <span class="pill ${b[i].s}">${ST[b[i].s]}</span></td><td class="${cls}">${lab}</td></tr>`; }).join("") + `</tbody>`;
+}
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function drawWave(m){
+  const cv = $("wave"), box = cv.parentElement, W = Math.max(320, box.clientWidth), H = 170, dpr = window.devicePixelRatio||1;
+  cv.style.width = W+"px"; cv.width = W*dpr; cv.height = H*dpr;
+  const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const T = m.env.length/10, top = 8, base = H-26, x = t => (t/T)*(W-2)+1;
+  g.fillStyle = css("--signal-soft"); g.strokeStyle = css("--signal"); g.lineWidth = 1;
+  for (const [a,b] of m.pauses){ g.fillRect(x(a), top, Math.max(2,x(b)-x(a)), base-top); g.beginPath(); g.moveTo(x(a),top); g.lineTo(x(b),top); g.stroke(); }
+  g.fillStyle = css("--accent"); g.globalAlpha = .55;
+  const bw = Math.max(1,(W/m.env.length)*.75);
+  m.env.forEach((v,i) => { const h = v*(base-top)*.92; g.fillRect(x(i/10), base-h, bw, h); });
+  g.globalAlpha = 1;
+  g.strokeStyle = css("--ink"); g.lineWidth = 2; g.lineJoin = "round"; g.beginPath(); let pen = false;
+  const yP = s => (top+ (base-top)/2) - Math.max(-8,Math.min(8,s))/8*((base-top)/2-6);
+  const pcs = m.pc.map((s,i) => { if (s==null) return null; let a=0,c=0; for (let k=-2;k<=2;k++){ const v=m.pc[i+k]; if (v!=null){a+=v;c++;} } return a/c; });
+  pcs.forEach((s,i) => { if (s==null){ pen=false; return; } const px=x(i/10+0.05), py=yP(s); if(!pen){g.moveTo(px,py);pen=true;} else g.lineTo(px,py); });
+  g.stroke();
+  g.fillStyle = css("--alert");
+  for (const [a,b] of m.fillers) g.fillRect(x(a), base+2, Math.max(4,x(b)-x(a)), 5);
+  g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(0,base+.5); g.lineTo(W,base+.5); g.stroke();
+  g.fillStyle = css("--muted"); g.font = "11px " + css("--f-mono"); g.textAlign = "center";
+  const step = T>150?30:T>80?10:5;
+  for (let t=0; t<=T; t+=step){ const px = Math.min(W-14, Math.max(10, x(t))); g.fillText(t+" s", px, H-6); }
+}
+
+// ---------- loading audio ----------
+function toMono16k(ab){
+  const n = ab.length, ch = ab.numberOfChannels, sr = ab.sampleRate;
+  const mono = new Float32Array(n);
+  for (let c=0;c<ch;c++){ const d = ab.getChannelData(c); for (let i=0;i<n;i++) mono[i]+=d[i]/ch; }
+  if (Math.abs(sr-16000) < 1) return mono;
+  const r = sr/16000, out = new Float32Array(Math.floor(n/r));
+  for (let i=0;i<out.length;i++){ const a=Math.floor(i*r), b=Math.min(n,Math.floor((i+1)*r)); let s=0; for(let k=a;k<b;k++) s+=mono[k]; out[i]=s/Math.max(1,b-a); }
+  return out;
+}
+async function handleFile(i, file){
+  if (!file) return;
+  const st = $("status-"+i); st.className = "status"; st.textContent = "Analizando «"+file.name+"»…";
+  try {
+    const buf = await file.arrayBuffer();
+    const AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const ctx = new AC(1, 16000, 16000);
+    const ab = await new Promise((res, rej) => { const p = ctx.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); });
+    let x = toMono16k(ab), cut = false;
+    if (x.length > 16000*180){ x = x.subarray(0, 16000*180); cut = true; }
+    await new Promise(r => setTimeout(r, 30));
+    const m = analyzeVoice(x, 16000);
+    if (m.error){ st.className = "status err"; st.textContent = m.error; return; }
+    m.cut = cut; takes[i] = m; manual[i] = newManual();
+    const pl = $("player-"+i); try { pl.src = URL.createObjectURL(file); pl.hidden = false; } catch(e){}
+    $("take-"+i).classList.add("loaded");
+    st.textContent = "Listo: " + file.name + " · " + fmt(m.duration,0) + " s";
+    isSample = false; view = i; render();
+    $("rep-title").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+  } catch(e){
+    st.className = "status err";
+    st.textContent = "No pudimos abrir este audio en este navegador. Prueba desde Chrome o comparte el audio como .m4a o .mp3.";
+  }
+}
+[0,1].forEach(i => {
+  $("file-"+i).addEventListener("change", e => handleFile(i, e.target.files[0]));
+  const t = $("take-"+i);
+  t.addEventListener("dragover", e => { e.preventDefault(); t.classList.add("drag"); });
+  t.addEventListener("dragleave", () => t.classList.remove("drag"));
+  t.addEventListener("drop", e => { e.preventDefault(); t.classList.remove("drag"); handleFile(i, e.dataTransfer.files[0]); });
+  $("seg-"+i).addEventListener("click", () => { if (takes[i]) { isSample=false; view=i; render(); } });
+});
+$("grid").addEventListener("click", e => {
+  const man = manual[isSample ? 0 : view];
+  const tb = e.target.closest(".tap"); const rb = e.target.closest("[data-r]");
+  if (tb){ const w = tb.dataset.w; if (w==="__reset") man.taps = newManual().taps; else man.taps[w]++; render(); }
+  if (rb){ const r = +rb.dataset.r; man.clarity = man.clarity===r ? 0 : r; render(); }
+});
+$("copy").addEventListener("click", async () => {
+  const m = isSample ? SAMPLE : takes[view]; const c = evaluate(m, manual[isSample?0:view]);
+  const txt = "Mi voz en 45 segundos" + (isSample ? " (ejemplo)" : view===0 ? " · Antes" : " · Después") + "\n" +
+    c.map(k => `- ${k.name}: ${k.big} ${k.unit} (${ST[k.s]})`).join("\n");
+  try { await navigator.clipboard.writeText(txt); $("copied").textContent = "Resumen copiado"; }
+  catch(e){ $("copied").textContent = "No se pudo copiar automáticamente."; }
+  setTimeout(() => $("copied").textContent = "", 2500);
+});
+const SAMPLE = makeSample();
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render); } catch(e){}
+new MutationObserver(render).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+render();
+})();
+</script>
